@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拼豆库存与图纸识别管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .nav-item.active { color: #3b82f6; }
+        .color-swatch { width: 40px; height: 40px; border-radius: 8px; border: 2px solid #e5e7eb; }
+        .status-badge { padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 500; }
+        .status-unstarted { background: #f3f4f6; color: #4b5563; }
+        .status-in-progress { background: #dbeafe; color: #2563eb; }
+        .status-completed { background: #dcfce7; color: #16a34a; }
+        .modal { display: none; }
+        .modal.active { display: flex; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen pb-20">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-5 sticky top-0 z-40">
+        <h1 id="pageTitle" class="text-xl font-bold">拼豆管理器</h1>
+    </header>
+
+    <!-- Home Page -->
+    <div id="page-home" class="page active p-4">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-white rounded-xl p-4 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-sm">总库存</p>
+                        <p id="totalInventory" class="text-2xl font-bold">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-sm">图纸数量</p>
+                        <p id="totalPatterns" class="text-2xl font-bold">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-sm">库存不足</p>
+                        <p id="lowStockCount" class="text-2xl font-bold text-yellow-600">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-gray-500 text-sm">已完成</p>
+                        <p id="completedPatterns" class="text-2xl font-bold text-green-600">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Pattern Button -->
+        <button onclick="showPage('new-pattern')" class="w-full bg-blue-600 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 mb-6">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            新建图纸
+        </button>
+
+        <!-- Low Stock Warning -->
+        <div id="lowStockSection" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 hidden">
+            <h2 class="font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                库存预警
+            </h2>
+            <div id="lowStockList" class="space-y-2"></div>
+        </div>
+
+        <!-- Recent Patterns -->
+        <div id="recentPatternsSection">
+            <h2 class="font-semibold text-gray-800 mb-3">最近图纸</h2>
+            <div id="recentPatternsList" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- Inventory Page -->
+    <div id="page-inventory" class="page p-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-4 sticky top-[72px] z-30">
+            <div class="relative mb-3">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" id="inventorySearch" placeholder="搜索色号或颜色名称..." class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <button id="filterLowStockBtn" onclick="toggleLowStockFilter()" class="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-medium transition-colors">
+                只看库存不足
+            </button>
+        </div>
+        <div id="inventoryList" class="space-y-3"></div>
+    </div>
+
+    <!-- Patterns Page -->
+    <div id="page-patterns" class="page p-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-4 sticky top-[72px] z-30">
+            <div class="flex items-center justify-between mb-3">
+                <input type="text" id="patternsSearch" placeholder="搜索图纸..." class="flex-1 mr-3 px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="showPage('new-pattern')" class="bg-blue-600 text-white p-3 rounded-xl">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="filterPatterns('all')" class="pattern-filter flex-1 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white" data-filter="all">全部</button>
+                <button onclick="filterPatterns('unstarted')" class="pattern-filter flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700" data-filter="unstarted">未开始</button>
+                <button onclick="filterPatterns('in-progress')" class="pattern-filter flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700" data-filter="in-progress">进行中</button>
+                <button onclick="filterPatterns('completed')" class="pattern-filter flex-1 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-700" data-filter="completed">已完成</button>
+            </div>
+        </div>
+        <div id="patternsGrid" class="grid grid-cols-2 gap-4"></div>
+        <div id="emptyPatterns" class="text-center py-12 hidden">
+            <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p class="text-gray-500">暂无图纸</p>
+            <button onclick="showPage('new-pattern')" class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg">创建第一个图纸</button>
+        </div>
+    </div>
+
+    <!-- New Pattern Page -->
+    <div id="page-new-pattern" class="page p-4">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">图纸名称</label>
+                <input type="text" id="newPatternName" placeholder="输入图纸名称..." class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">上传图纸</label>
+                <div id="uploadArea" onclick="document.getElementById('imageInput').click()" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500 transition-colors">
+                    <svg class="w-12 h-12 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <p class="text-gray-500">点击上传图片</p>
+                    <p class="text-xs text-gray-400 mt-1">支持 PNG, JPG, WEBP</p>
+                </div>
+                <div id="imagePreview" class="hidden">
+                    <img id="previewImg" class="w-full rounded-xl mb-2">
+                    <button onclick="clearImage()" class="text-red-500 text-sm">更换图片</button>
+                </div>
+                <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+            </div>
+            <div id="gridSettings" class="bg-white rounded-xl p-4 hidden">
+                <h3 class="font-medium text-gray-800 mb-4">网格设置</h3>
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">行数</label>
+                        <input type="number" id="gridRows" value="20" min="1" class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">列数</label>
+                        <input type="number" id="gridCols" value="20" min="1" class="w-full px-3 py-2 border border-gray-200 rounded-lg">
+                    </div>
+                </div>
+                <button id="processBtn" onclick="processPatternImage()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-medium">
+                    开始识别
+                </button>
+            </div>
+            <div id="colorResults" class="bg-white rounded-xl p-4 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-medium text-gray-800">颜色统计</h3>
+                    <button onclick="addColorItem()" class="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="colorItemsList" class="space-y-3"></div>
+                <div class="mt-4 pt-4 border-t">
+                    <p class="text-sm text-gray-500">总计: <span id="totalBeads" class="font-bold text-gray-800">0</span> 颗</p>
+                </div>
+            </div>
+            <button id="savePatternBtn" onclick="saveNewPattern()" class="w-full bg-green-600 text-white py-4 rounded-xl font-semibold hidden">
+                保存图纸
+            </button>
+        </div>
+    </div>
+
+    <!-- Pattern Detail Page -->
+    <div id="page-pattern-detail" class="page p-4">
+        <div id="patternDetailContent"></div>
+    </div>
+
+    <!-- Settings Page -->
+    <div id="page-settings" class="page p-4">
+        <div class="space-y-4">
+            <div class="bg-white rounded-xl p-4">
+                <h2 class="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486
