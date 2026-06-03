@@ -432,8 +432,8 @@ export default function NewPatternPage() {
                                 key={idx} 
                                 className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-lg text-sm font-medium"
                               >
-                                {item.colorCode} {item.quantity}
-                                {item.original && item.original !== item.colorCode && (
+                                {item.code} {item.quantity}
+                                {item.original && item.original !== item.code && (
                                   <span className="text-xs text-green-600 ml-1 opacity-75">
                                     ({item.original})
                                   </span>
