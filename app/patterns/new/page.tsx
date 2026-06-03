@@ -318,7 +318,7 @@ export default function NewPatternPage() {
                   <ImageCropper
                     imageSrc={image}
                     onSelectionChange={handleSelectionChange}
-                    initialArea={selectionArea}
+                    initialArea={selectionArea ?? undefined}
                   />
                 </div>
               ) : step === 'confirm' || step === 'review' ? (
